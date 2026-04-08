@@ -139,18 +139,3 @@ PlanilhaDash/
 - [Guia para Contribuidores](docs/skills.md) — stack, padrões e como contribuir
 
 ---
-
-## Contribuindo
-
-Contribuições são bem-vindas! Por favor:
-
-1. Faça um fork do repositório
-2. Crie uma branch: `git checkout -b feat/minha-feature`
-3. Commit seguindo [Conventional Commits](https://www.conventionalcommits.org/): `feat: adiciona suporte a ODS`
-4. Abra um Pull Request descrevendo suas mudanças
-
----
-
-## Licença
-
-MIT © 2024 — veja [LICENSE](LICENSE) para detalhes.
