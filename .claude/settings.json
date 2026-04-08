@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run lint)",
+      "Bash(npm run lint:fix)",
+      "Bash(npm run format)",
+      "Bash(npm run build)",
+      "Bash(npm run db:push)",
+      "Bash(npm run db:generate)",
+      "Bash(npm run db:studio)",
+      "Bash(npm test)",
+      "Bash(npm run test:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)"
+    ]
+  }
+}
