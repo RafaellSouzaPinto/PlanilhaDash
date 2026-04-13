@@ -48,7 +48,17 @@ function summarizeChartData(chart: ChartConfig): string {
   return `  Dados(${data.length}):${JSON.stringify(data)}`;
 }
 
-function buildPrompt(
+const SYSTEM_PROMPT = `Você é um analista de dados sênior reportando diretamente ao CEO.
+
+REGRAS ABSOLUTAS — desobedecer invalida a análise:
+1. USE apenas números reais dos dados fornecidos. Zero invenção.
+2. PROIBIDO tempo futuro: nunca use "vai", "irá", "tende", "poderá", "pode crescer" ou qualquer forma preditiva.
+3. PROIBIDO generalizar sem número: "alta variação" sem valor exato = inválido.
+4. PROIBIDO encher linguiça: cada frase deve conter um fato ou um número concreto.
+5. Se um dado não estiver presente nos dados, escreva "Dado não disponível" — nunca suponha.
+6. Tom: técnico, direto, sem elogios, sem prefácios, sem conclusões motivacionais.`;
+
+function buildDataPrompt(
   columnsMeta: ColumnMeta[],
   sampleRows: Record<string, unknown>[],
   chartsConfig: ChartConfig[]
@@ -81,46 +91,34 @@ ${summarizeChartData(chart)}`;
     })
     .join("\n\n");
 
-  const chartTitles = chartsConfig.map((c, i) => `### ${c.title}`).join("\n");
+  const chartSections = chartsConfig.map((c) => `### ${c.title}\n[1-2 frases com padrão real + número exato dos dados acima]`).join("\n\n");
 
-  return `Você é um analista de dados especialista.
-
-REGRAS IMPORTANTES:
-- NÃO invente informações
-- NÃO faça suposições genéricas
-- Use APENAS os dados fornecidos abaixo
-- Se faltar informação, diga explicitamente
-- Use números reais dos dados em cada análise
-
----
-
-## Colunas detectadas (${columnsMeta.length} colunas):
+  return `## Colunas detectadas (${columnsMeta.length} colunas):
 ${columnsDesc}
 
 ## Amostra de dados brutos (${sample.length} linhas):
 ${JSON.stringify(sample)}
 
-## Os 4 gráficos gerados e seus dados reais:
+## Gráficos gerados e seus dados reais:
 
 ${chartsDesc}
 
 ---
 
-Analise profundamente os gráficos acima e responda EXATAMENTE nesta estrutura Markdown:
+Responda EXATAMENTE nesta estrutura Markdown, sem adicionar ou remover seções:
 
 ## Resumo Executivo
-(2-3 frases diretas com os principais achados baseados nos dados reais)
+• [fato principal com número real]
+• [segundo fato com número real]
+• [terceiro fato com número real — máximo 3 bullets]
 
-## Análise por Gráfico
+## Análise dos Dados
 
-${chartTitles}
-(Para cada gráfico: identifique padrões reais com números — picos, quedas, ciclos, categorias dominantes)
+${chartSections}
 
-## Correlações entre os Gráficos
-(Relacione o que acontece em um gráfico com o que acontece nos outros. Use números.)
-
-## Insights e Recomendações
-(3-5 ações práticas e específicas baseadas apenas nos dados fornecidos)`;
+## Pontos de Atenção
+• [anomalia, concentração ou outlier real detectado nos dados — sem prescrever ação futura]
+• [máximo 3 bullets — descreva só o que os dados mostram]`;
 }
 
 function createModel(provider: string, apiKey: string, modelName: string) {
@@ -158,7 +156,7 @@ export async function analyzeWithAI(
     throw new Error(`Provider não suportado: ${provider}`);
   }
 
-  const prompt = buildPrompt(columnsMeta, sampleRows, chartsConfig);
+  const dataPrompt = buildDataPrompt(columnsMeta, sampleRows, chartsConfig);
   const modelsToTry = [defaultModel, ...(FALLBACK_MODELS[provider] ?? [])];
 
   let lastError: Error | null = null;
@@ -167,7 +165,7 @@ export async function analyzeWithAI(
   for (const modelName of uniqueModels) {
     try {
       const model = createModel(provider, apiKey, modelName);
-      const result = await generateText({ model, prompt, maxTokens: 2500 });
+      const result = await generateText({ model, system: SYSTEM_PROMPT, prompt: dataPrompt, maxTokens: 1200 });
       return result.text;
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
