@@ -25,7 +25,7 @@
 | ORM | Drizzle ORM | 0.36.x |
 | Migrations CLI | Drizzle Kit | 0.28.x |
 | Autenticação | Lucia Auth | 3.x |
-| IA multi-provider | Vercel AI SDK | 5.x |
+| IA multi-provider | Vercel AI SDK | 4.x |
 | Gráficos | Recharts | 2.x |
 | Parsing XLSX/ODS | SheetJS | 0.20.x |
 | Parsing CSV | PapaParse | 5.x |
@@ -65,6 +65,9 @@ npm run db:generate   # Gerar arquivo de migration
 npm run lint          # ESLint
 npm run lint:fix      # ESLint + autofix
 npm run format        # Prettier
+npm run test          # Vitest (todos os testes)
+npm run test:watch    # Vitest em modo watch
+npm run test:ui       # Vitest com UI visual
 ```
 
 ---
@@ -103,6 +106,7 @@ VALUES ('Admin Dev', 'admin@planilha.dev', '<hash_gerado_acima>');
 | [docs/modulos/00_MAPA_ROTAS_COMPLETO.md](docs/modulos/00_MAPA_ROTAS_COMPLETO.md) | Mapa completo de rotas Next.js |
 | [docs/modulos/00_VISAO_GERAL_ARQUITETURA.md](docs/modulos/00_VISAO_GERAL_ARQUITETURA.md) | Diagrama e visão geral da arquitetura |
 | [docs/decisions/correcoes.md](docs/decisions/correcoes.md) | Decisões técnicas e correções já aplicadas |
+| [docs/modulos/M07_LANDING_PAGE_V3.md](docs/modulos/M07_LANDING_PAGE_V3.md) | Spec final da landing page (versão implementada) |
 
 ---
 

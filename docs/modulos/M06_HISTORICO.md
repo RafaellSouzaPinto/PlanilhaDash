@@ -1,6 +1,6 @@
 # M06 — Histórico de Relatórios (Implementação Completa)
 
-**Status:** 🚧 Em desenvolvimento  
+**Status:** ✅ Implementado  
 **Rotas:** `GET /api/reports` · `POST /api/reports` · `GET /api/reports/[id]`  
 **Páginas:** `/dashboard` · `/reports/[id]`
 

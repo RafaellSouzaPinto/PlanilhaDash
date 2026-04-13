@@ -217,6 +217,45 @@ Paleta customizada não definida — usar os tokens padrão do shadcn/ui (CSS va
 
 ---
 
+## Landing page — princípios de design
+
+> **A landing page é o canal, não a vitrine.**
+>
+> Referência: [M07_LANDING_PAGE_V3.md](modulos/M07_LANDING_PAGE_V3.md)
+
+### Filosofia
+
+O usuário não veio ler sobre o produto — veio resolver um problema. A landing page deve deixar ele experimentar imediatamente, sem fricção. Cada palavra a mais é um motivo a mais para fechar a aba.
+
+### Regras inegociáveis
+
+1. **Upload na landing** — o usuário processa a primeira planilha sem fazer login
+2. **Um único CTA visual** — o dropzone IS o CTA; não há botões concorrentes
+3. **Máximo 2 frases de copy** — headline + uma linha de contexto, nada mais
+4. **Freemium de primeira visita** — `localStorage['pd_trial_used']` controla o gate
+5. **Zero seções de features** — quem quer saber mais, usa o produto; o produto explica a si mesmo
+6. **Navbar ultra-minimal** — logo + "Entrar" (para quem já tem conta); sem "Criar conta" na nav
+7. **Sem footer de links** — footer não existe na landing; só copyright se necessário
+
+### Fluxo de conversão
+
+```
+Visita → Dropzone → Upload → Dashboard gerado (sem login)
+                                     │
+                    ┌────────────────┴──────────────────┐
+                    │  Banner: "Salvar, IA, PDF?         │
+                    │  Crie uma conta — é grátis"        │
+                    │  [Criar conta]                     │
+                    └────────────────────────────────────┘
+                                     │
+                    Segunda visita (pd_trial_used=true)
+                                     │
+                    Gate antes do upload:
+                    "Gostou? Crie uma conta para continuar."
+```
+
+---
+
 ## Convenções de estilo
 
 - **Responsive-first:** mobile → tablet → desktop com Tailwind breakpoints

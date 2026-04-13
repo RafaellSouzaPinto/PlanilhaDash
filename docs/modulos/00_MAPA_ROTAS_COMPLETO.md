@@ -4,7 +4,7 @@
 
 | Rota | Arquivo | Auth | Descrição |
 |------|---------|:----:|-----------|
-| `/` | `app/page.tsx` | Não | Redirect → `/dashboard` se autenticado, senão `/login` |
+| `/` | `app/page.tsx` | Não | Landing page (visitante) ou redirect → `/dashboard` (autenticado) |
 | `/login` | `app/(auth)/login/page.tsx` | Não | Formulário de login |
 | `/signup` | `app/(auth)/signup/page.tsx` | Não | Formulário de cadastro |
 | `/dashboard` | `app/(app)/dashboard/page.tsx` | Sim | Histórico de relatórios |
