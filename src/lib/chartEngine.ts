@@ -1,4 +1,4 @@
-import type { ChartConfig, ChartType, ColumnMeta } from "@/types/spreadsheet";
+import type { ChartConfig, ChartSuggestion, ChartType, ColumnMeta } from "@/types/spreadsheet";
 
 const MAX_CHARTS = 4;
 const MAX_PIE_UNIQUE = 8;
@@ -157,4 +157,72 @@ function parsePercentage(value: unknown): number {
   if (typeof value === "number") return value;
   const str = String(value).replace("%", "").trim();
   return parseFloat(str) || 0;
+}
+
+/**
+ * Converts a ChartSuggestion (from AI) into a full ChartConfig with pre-calculated data.
+ * Uses the same aggregation helpers as buildChartConfigs.
+ * Never throws — returns data: [] if column references are invalid.
+ */
+export function buildChartFromSuggestion(
+  suggestion: ChartSuggestion,
+  rows: Record<string, unknown>[]
+): ChartConfig {
+  const { type, xKey, yKey, title } = suggestion;
+
+  switch (type) {
+    case "line": {
+      return {
+        type: "line",
+        xKey,
+        yKey,
+        title,
+        data: rows.map((r) => ({
+          [xKey]: r[xKey],
+          ...(yKey ? { [yKey]: r[yKey] } : {}),
+        })),
+      };
+    }
+    case "bar": {
+      if (!yKey) {
+        return { type: "bar", xKey, yKey, title, data: [] };
+      }
+      return {
+        type: "bar",
+        xKey,
+        yKey,
+        title,
+        data: aggregateBarData(rows, xKey, yKey),
+      };
+    }
+    case "barHorizontal": {
+      return {
+        type: "barHorizontal",
+        xKey,
+        yKey,
+        title,
+        data: rows.slice(0, 20).map((r) => ({
+          [xKey]: parsePercentage(r[xKey]),
+          ...(yKey ? { [yKey]: r[yKey] } : {}),
+        })),
+      };
+    }
+    case "pie": {
+      return {
+        type: "pie",
+        xKey,
+        title,
+        data: countByCategory(rows, xKey),
+      };
+    }
+    case "table":
+    default: {
+      return {
+        type: "table",
+        xKey,
+        title,
+        data: rows.slice(0, 50),
+      };
+    }
+  }
 }
