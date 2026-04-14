@@ -6,14 +6,20 @@ import { Dropzone } from "@/components/upload/Dropzone";
 import { FilePreview } from "@/components/upload/FilePreview";
 import { ChartGrid } from "@/components/dashboard/ChartGrid";
 import { InsightsPanel } from "@/components/ai/InsightsPanel";
+import { ChartSuggestionSelector } from "@/components/ai/ChartSuggestionSelector";
 import { ExportButton } from "@/components/pdf/ExportButton";
 import { ApiKeyModal } from "@/components/modals/ApiKeyModal";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { parseFile } from "@/lib/parser";
 import { inferTypes } from "@/lib/inferTypes";
-import { buildChartConfigs } from "@/lib/chartEngine";
-import type { ColumnMeta, ChartConfig } from "@/types/spreadsheet";
+import { buildChartConfigs, buildChartFromSuggestion } from "@/lib/chartEngine";
+import type {
+  ColumnMeta,
+  ChartConfig,
+  ChartSuggestion,
+  ChartSuggestionsResponse,
+} from "@/types/spreadsheet";
 import { Sparkles, Save, Loader2 } from "lucide-react";
 
 const AI_SAMPLE_ROWS = 50;
@@ -32,6 +38,12 @@ export default function UploadPage() {
   const [error, setError] = useState("");
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
+  // AI chart suggestion state
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<ChartSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsFallback, setSuggestionsFallback] = useState(false);
+
   const handleFileAccepted = useCallback(async (f: File) => {
     setFile(f);
     setRows([]);
@@ -39,16 +51,67 @@ export default function UploadPage() {
     setChartsConfig([]);
     setAiInsights(null);
     setError("");
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setSuggestionsFallback(false);
     setParsing(true);
 
     try {
       const parsed = await parseFile(f);
       const cols = inferTypes(parsed);
-      const charts = buildChartConfigs(cols, parsed);
-
       setRows(parsed);
       setColumnsMeta(cols);
-      setChartsConfig(charts);
+
+      // Check if user has AI key configured
+      const keyRes = await fetch("/api/user/api-key");
+      const keyData = await keyRes.json();
+
+      if (!keyData.hasApiKey) {
+        // No AI key — use deterministic chart engine immediately
+        setChartsConfig(buildChartConfigs(cols, parsed));
+      } else {
+        // AI key present — request contextual suggestions
+        setSuggestionsLoading(true);
+        setShowSuggestions(true);
+
+        try {
+          const suggestRes = await fetch("/api/ai-chart-suggestions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              columnsMeta: cols,
+              sampleRows: parsed.slice(0, AI_SAMPLE_ROWS),
+            }),
+          });
+
+          if (!suggestRes.ok) {
+            // 400/401 — fall back silently
+            setChartsConfig(buildChartConfigs(cols, parsed));
+            setShowSuggestions(false);
+          } else {
+            const suggestData: ChartSuggestionsResponse = await suggestRes.json();
+
+            if (suggestData.fallback) {
+              // Remote fallback — build charts directly from deterministic suggestions
+              const charts = suggestData.suggestions
+                .slice(0, 4)
+                .map((s) => buildChartFromSuggestion(s, parsed));
+              setChartsConfig(charts);
+              setSuggestionsFallback(true);
+              setShowSuggestions(false);
+            } else {
+              // Show selector for user to choose
+              setSuggestions(suggestData.suggestions);
+            }
+          }
+        } catch {
+          // Network error during suggestions — fall back to deterministic
+          setChartsConfig(buildChartConfigs(cols, parsed));
+          setShowSuggestions(false);
+        } finally {
+          setSuggestionsLoading(false);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao processar arquivo");
     } finally {
@@ -61,7 +124,6 @@ export default function UploadPage() {
     setAnalyzing(true);
 
     try {
-      // Check if user has API key configured
       const keyRes = await fetch("/api/user/api-key");
       const keyData = await keyRes.json();
 
@@ -154,6 +216,9 @@ export default function UploadPage() {
             setColumnsMeta([]);
             setChartsConfig([]);
             setAiInsights(null);
+            setSuggestions([]);
+            setShowSuggestions(false);
+            setSuggestionsFallback(false);
           }}
         />
       )}
@@ -168,6 +233,28 @@ export default function UploadPage() {
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* AI Suggestion Selector — shown while waiting for/choosing suggestions */}
+      {showSuggestions && (
+        <ChartSuggestionSelector
+          suggestions={suggestions}
+          loading={suggestionsLoading}
+          onConfirm={(selected) => {
+            const charts = selected.map((s) => buildChartFromSuggestion(s, rows));
+            setChartsConfig(charts);
+            setShowSuggestions(false);
+          }}
+        />
+      )}
+
+      {/* Fallback notice when AI returned no suggestions */}
+      {suggestionsFallback && chartsConfig.length > 0 && (
+        <Alert>
+          <AlertDescription>
+            A IA não gerou sugestões para esta planilha. Exibindo gráficos automáticos.
+          </AlertDescription>
         </Alert>
       )}
 
@@ -220,7 +307,6 @@ export default function UploadPage() {
         open={showApiKeyModal}
         onOpenChange={setShowApiKeyModal}
         onSaved={() => {
-          // Re-trigger analysis after key is saved
           handleAnalyzeAI();
         }}
       />
