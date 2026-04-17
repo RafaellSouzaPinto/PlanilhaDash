@@ -1,93 +1,70 @@
 # PlanilhaDash
 
+Ferramenta open source para pequenas empresas visualizarem seus dados financeiros.
+Suba uma planilha Excel ou CSV e gere dashboards visuais — sem custo, sem assinatura.
+
+![License](https://img.shields.io/badge/licença-MIT-green)
+![Next.js](https://img.shields.io/badge/Next.js-14-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Next.js](https://img.shields.io/badge/Next.js-14+-black)
-![MariaDB](https://img.shields.io/badge/MariaDB-10.11-blue)
 
-**PlanilhaDash** é um micro-SaaS open-source que transforma planilhas de negócios em dashboards visuais interativos — com autenticação de usuários, histórico de relatórios e análise de IA via sua própria chave de API.
+---
 
-Faça upload de qualquer planilha (vendas, RH, estoque, financeiro...), e o sistema detecta automaticamente as colunas, gera gráficos relevantes, oferece análise de IA (OpenAI, Claude, Gemini ou Groq) e salva tudo no seu histórico.
+## Screenshots
+
+<!-- quando os gráficos estiverem prontos, coloca prints aqui -->
 
 ---
 
 ## Funcionalidades
 
-- **Autenticação completa**: cadastro e login com email/senha, sessões persistidas no banco
-- **Upload inteligente**: suporte a `.xlsx`, `.csv` e `.ods`
-- **Detecção dinâmica de colunas**: o sistema infere tipos automaticamente (numérico, monetário, data, categórico)
-- **Dashboard automático**: gráficos selecionados com base nos dados (barras, linhas, pizza, dispersão)
-- **Análise de IA**: insights gerados via OpenAI, Anthropic (Claude), Google (Gemini) ou Groq — usando sua própria API Key
-- **Histórico de relatórios**: todos os dashboards ficam salvos na sua conta
-- **Exportação PDF**: download do dashboard completo com um clique
-- **API Key segura**: armazenada criptografada (AES-256-GCM), nunca exposta em logs
+- [x] Upload de planilhas `.xlsx` e `.csv`
+- [x] Geração automática de dashboard com gráficos (barras, linhas, pizza)
+- [x] Dois modos: **com IA** (interpreta planilhas bagunçadas) e **sem IA** (template padronizado)
+- [x] IA com sua própria chave — OpenAI, Anthropic (Claude), Google (Gemini) ou Groq
+- [x] Histórico de relatórios por usuário
+- [x] Exportação PDF
+- [ ] Logo da empresa no PDF exportado
+- [ ] Demo online
 
 ---
 
 ## Stack
 
-| Camada | Tecnologia |
-|--------|-----------|
-| Framework | Next.js 14+ (App Router, TypeScript) |
-| Banco de dados | MariaDB 10.11 |
-| ORM | Drizzle ORM |
-| Autenticação | Lucia Auth v3 |
-| IA Multi-provider | Vercel AI SDK v5 |
-| Gráficos | Recharts |
-| Parsing XLSX | SheetJS (xlsx) |
-| Parsing CSV | PapaParse |
-| PDF | html2canvas + jsPDF |
-| UI | Tailwind CSS + shadcn/ui |
+- Next.js 14 + TypeScript
+- Recharts (gráficos)
+- MariaDB + Drizzle ORM
+- Vercel AI SDK (multi-provider)
+- Tailwind CSS + shadcn/ui
 
 ---
 
-## Quickstart
+## Instalação
 
-### Pré-requisitos
-- Node.js >= 20.x
-- MariaDB 10.11 rodando localmente ou em servidor
-
-### 1. Clonar e instalar
+**Pré-requisitos:** Node.js >= 20, MariaDB 10.11
 
 ```bash
-git clone https://github.com/seu-usuario/PlanilhaDash.git
+git clone https://github.com/RafaellSouzaPinto/PlanilhaDash.git
 cd PlanilhaDash
 npm install
-```
-
-### 2. Configurar variáveis de ambiente
-
-```bash
 cp .env.example .env.local
 ```
 
-Edite `.env.local`:
+Gere as chaves obrigatórias:
 
-```env
-DATABASE_URL=mysql://user:password@localhost:3306/planilhadash
-ENCRYPTION_KEY=<gere com o comando abaixo>
-LUCIA_SECRET=<string aleatória longa>
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
-
-Gerar `ENCRYPTION_KEY`:
 ```bash
+# ENCRYPTION_KEY
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# LUCIA_SECRET
+openssl rand -base64 32
 ```
 
-### 3. Criar banco e rodar migrations
+Crie o banco e aplique o schema:
 
 ```bash
-# Criar banco no MariaDB
 mysql -u root -p -e "CREATE DATABASE planilhadash CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-
-# Rodar migrations (Drizzle Kit)
 npm run db:push
-```
-
-### 4. Iniciar
-
-```bash
 npm run dev
 ```
 
@@ -95,47 +72,34 @@ Acesse [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## Como usar
+## Variáveis de ambiente
 
-1. **Crie sua conta** ou faça login
-2. **Configure sua API Key de IA** no modal que aparece ao entrar (OpenAI, Claude, Gemini, Groq — ou ignore para usar sem IA)
-3. **Faça upload** da sua planilha (arraste ou clique)
-4. **Visualize** o dashboard gerado automaticamente
-5. **Baixe** o PDF com o dashboard e os insights
-6. **Acesse o histórico** — todos os relatórios ficam salvos na sua conta
-
-> Você pode atualizar sua API Key de IA a qualquer momento nas configurações.
-
----
-
-## Estrutura do Projeto
-
-```
-PlanilhaDash/
-├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── (auth)/             # Login e cadastro
-│   │   ├── (app)/              # Rotas protegidas
-│   │   └── api/                # API Routes
-│   ├── components/             # Componentes React
-│   ├── lib/                    # Lógica de negócio
-│   │   ├── auth/               # Lucia Auth
-│   │   ├── db/                 # Drizzle ORM + schema
-│   │   ├── crypto/             # Criptografia de API Keys
-│   │   ├── ai/                 # Vercel AI SDK multi-provider
-│   │   └── parser/             # Parsing de planilhas
-│   └── types/
-├── uploads/                    # Planilhas por usuário (local)
-├── drizzle/                    # Migrations
-└── docs/                       # Documentação técnica
-```
+| Variável | Descrição | Obrigatória |
+|----------|-----------|:-----------:|
+| `DATABASE_URL` | URL de conexão MariaDB | ✅ |
+| `ENCRYPTION_KEY` | Chave AES-256-GCM — 64 chars hex | ✅ |
+| `LUCIA_SECRET` | Segredo de sessão | ✅ |
+| `NEXT_PUBLIC_APP_URL` | URL pública (padrão: localhost:3000) | Não |
+| `MAX_FILE_SIZE_MB` | Limite de upload em MB (padrão: 10) | Não |
+| `AI_SAMPLE_ROWS` | Linhas enviadas à IA (padrão: 50) | Não |
+| `FREE_TIER_LIMIT` | Análises gratuitas por usuário (padrão: 3) | Não |
+| `PLANILHA_OPENAI_KEY` | Chave OpenAI para análises gratuitas | Não |
 
 ---
 
-## Documentação
+## Como contribuir
 
-- [Especificação Técnica](docs/spec.md) — arquitetura, schema do banco, auth, criptografia e IA
-- [Roadmap de Features](docs/features.md) — o que está planejado e o que já existe
-- [Guia para Contribuidores](docs/skills.md) — stack, padrões e como contribuir
+1. Fork o projeto
+2. Crie uma branch (`git checkout -b feature/minha-feature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona feature X'`)
+4. Push pra branch (`git push origin feature/minha-feature`)
+5. Abra um Pull Request
+
+Veja o [CONTRIBUTING.md](CONTRIBUTING.md) para mais detalhes.
+Olhe as issues abertas — tem bastante coisa com `good first issue`.
 
 ---
+
+## Licença
+
+MIT — veja [LICENSE](LICENSE)

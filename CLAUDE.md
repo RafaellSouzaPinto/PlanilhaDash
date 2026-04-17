@@ -7,9 +7,9 @@
 
 ## Sobre o projeto
 
-**PlanilhaDash** é um micro-SaaS open-source que transforma planilhas de negócios em dashboards visuais interativos.
+**PlanilhaDash** é um projeto open-source que transforma planilhas de negócios em dashboards visuais interativos — gratuito, sem planos pagos ou assinatura.
 
-- **Público-alvo:** Analistas, gestores e pequenas empresas que precisam visualizar dados de planilhas sem ferramentas complexas.
+- **Público-alvo:** Pequenas empresas que precisam visualizar dados financeiros sem pagar por ferramentas complexas.
 - **Propósito:** Upload de planilha (CSV/XLSX/ODS) → detecção automática de colunas → geração de gráficos → análise de IA com API Key própria do usuário → histórico de relatórios → exportação PDF.
 - **Modelo de IA:** Bring Your Own Key — o sistema nunca armazena chaves em plaintext. Suporta OpenAI, Anthropic (Claude), Google (Gemini) e Groq.
 
