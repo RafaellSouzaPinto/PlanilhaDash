@@ -1,5 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
-import { encryptApiKey } from "@/lib/crypto/apiKey";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   sampleColumnsMeta,
   sampleRows,
@@ -10,11 +9,6 @@ import {
   responseWithInvalidChartType,
   mixedValidInvalidResponse,
 } from "../fixtures/m08";
-
-beforeAll(() => {
-  process.env.ENCRYPTION_KEY =
-    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-});
 
 // Mock Vercel AI SDK and provider SDKs
 vi.mock("ai", () => ({ generateText: vi.fn() }));
@@ -32,7 +26,7 @@ vi.mock("@ai-sdk/groq", () => ({
 }));
 
 describe("suggestChartsWithAI()", () => {
-  const encryptedKey = encryptApiKey("sk-test-unit");
+  const plainApiKey = "sk-test-unit";
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -45,7 +39,7 @@ describe("suggestChartsWithAI()", () => {
     const { suggestChartsWithAI } = await import("@/lib/ai/suggestCharts");
     const result = await suggestChartsWithAI(
       "openai",
-      encryptedKey,
+      plainApiKey,
       sampleColumnsMeta,
       sampleRows
     );
@@ -67,7 +61,7 @@ describe("suggestChartsWithAI()", () => {
 
     const { suggestChartsWithAI } = await import("@/lib/ai/suggestCharts");
     await expect(
-      suggestChartsWithAI("openai", encryptedKey, sampleColumnsMeta, sampleRows)
+      suggestChartsWithAI("openai", plainApiKey, sampleColumnsMeta, sampleRows)
     ).rejects.toThrow("JSON inválido");
   });
 
@@ -78,7 +72,7 @@ describe("suggestChartsWithAI()", () => {
     const { suggestChartsWithAI } = await import("@/lib/ai/suggestCharts");
     const result = await suggestChartsWithAI(
       "openai",
-      encryptedKey,
+      plainApiKey,
       sampleColumnsMeta,
       sampleRows
     );
@@ -95,7 +89,7 @@ describe("suggestChartsWithAI()", () => {
     const { suggestChartsWithAI } = await import("@/lib/ai/suggestCharts");
     const result = await suggestChartsWithAI(
       "openai",
-      encryptedKey,
+      plainApiKey,
       sampleColumnsMeta,
       sampleRows
     );
@@ -112,7 +106,7 @@ describe("suggestChartsWithAI()", () => {
     const { suggestChartsWithAI } = await import("@/lib/ai/suggestCharts");
     const result = await suggestChartsWithAI(
       "openai",
-      encryptedKey,
+      plainApiKey,
       sampleColumnsMeta,
       sampleRows
     );
@@ -129,7 +123,7 @@ describe("suggestChartsWithAI()", () => {
     const { suggestChartsWithAI } = await import("@/lib/ai/suggestCharts");
     const result = await suggestChartsWithAI(
       "openai",
-      encryptedKey,
+      plainApiKey,
       sampleColumnsMeta,
       sampleRows
     );
@@ -148,7 +142,7 @@ describe("suggestChartsWithAI()", () => {
     const { suggestChartsWithAI } = await import("@/lib/ai/suggestCharts");
     const result = await suggestChartsWithAI(
       "google",
-      encryptedKey,
+      plainApiKey,
       sampleColumnsMeta,
       sampleRows
     );
@@ -165,7 +159,7 @@ describe("suggestChartsWithAI()", () => {
 
     const { suggestChartsWithAI } = await import("@/lib/ai/suggestCharts");
     await expect(
-      suggestChartsWithAI("openai", encryptedKey, sampleColumnsMeta, sampleRows)
+      suggestChartsWithAI("openai", plainApiKey, sampleColumnsMeta, sampleRows)
     ).rejects.toThrow("Incorrect API key provided");
 
     expect(vi.mocked(generateText)).toHaveBeenCalledTimes(1);

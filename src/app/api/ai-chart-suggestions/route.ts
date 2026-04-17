@@ -2,10 +2,12 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { validateSession } from "@/lib/auth/session";
 import { suggestChartsWithAI } from "@/lib/ai/suggestCharts";
-import { buildChartConfigs } from "@/lib/chartEngine";
+import { decryptApiKey } from "@/lib/crypto/apiKey";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import type { ChartSuggestion, ColumnMeta } from "@/types/spreadsheet";
+import type { ColumnMeta } from "@/types/spreadsheet";
+
+const FREE_TIER_LIMIT = Number(process.env.FREE_TIER_LIMIT ?? 3);
 
 const chartSuggestionsRequestSchema = z.object({
   columnsMeta: z
@@ -33,20 +35,6 @@ const chartSuggestionsRequestSchema = z.object({
   sampleRows: z.array(z.record(z.unknown())).max(50),
 });
 
-function configToSuggestion(
-  config: import("@/types/spreadsheet").ChartConfig,
-  index: number
-): ChartSuggestion {
-  return {
-    type: config.type,
-    xKey: config.xKey,
-    yKey: config.yKey,
-    title: config.title,
-    rationale: "",
-    priority: index + 1,
-  };
-}
-
 export async function POST(req: Request): Promise<Response> {
   const validated = await validateSession();
   if (!validated) {
@@ -69,36 +57,99 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const [user] = await db
-    .select({ aiProvider: users.aiProvider, aiApiKey: users.aiApiKey })
+    .select({
+      aiProvider: users.aiProvider,
+      aiApiKey: users.aiApiKey,
+      freeAnalysesUsed: users.freeAnalysesUsed,
+      freeAnalysesResetAt: users.freeAnalysesResetAt,
+    })
     .from(users)
-    .where(eq(users.id, validated.user.id))
+    .where(eq(users.id, Number(validated.user.id)))
     .limit(1);
-
-  if (!user?.aiApiKey || !user?.aiProvider) {
-    return Response.json(
-      { error: "Chave de API não configurada." },
-      { status: 400 }
-    );
-  }
 
   const columnsMeta = parsed.data.columnsMeta as ColumnMeta[];
   const sampleRows = parsed.data.sampleRows;
 
+  // Resolve which key to use and whether this counts against free tier
+  let apiKey: string | null = null;
+  let provider: string | null = null;
+  let isFreeTier = false;
+
+  if (user?.aiApiKey && user?.aiProvider) {
+    apiKey = decryptApiKey(user.aiApiKey);
+    provider = user.aiProvider;
+  } else if (process.env.PLANILHA_GROQ_KEY) {
+    apiKey = process.env.PLANILHA_GROQ_KEY;
+    provider = "groq";
+    isFreeTier = true;
+  } else if (process.env.PLANILHA_OPENAI_KEY) {
+    apiKey = process.env.PLANILHA_OPENAI_KEY;
+    provider = "openai";
+    isFreeTier = true;
+  }
+
+  // No key available at all
+  if (!apiKey || !provider) {
+    return Response.json(
+      { error: "Nenhuma chave de IA configurada." },
+      { status: 400 }
+    );
+  }
+
+  // Check free tier limit before calling AI
+  if (isFreeTier) {
+    const now = new Date();
+    const resetAt = user?.freeAnalysesResetAt ?? null;
+    const usedThisMonth =
+      resetAt && now > resetAt ? 0 : (user?.freeAnalysesUsed ?? 0);
+
+    if (usedThisMonth >= FREE_TIER_LIMIT) {
+      return Response.json(
+        {
+          error: "FREE_TIER_EXHAUSTED",
+          message: `Você utilizou todas as ${FREE_TIER_LIMIT} análises gratuitas deste mês.`,
+          freeTierLimit: FREE_TIER_LIMIT,
+        },
+        { status: 402 }
+      );
+    }
+  }
+
   try {
     const suggestions = await suggestChartsWithAI(
-      user.aiProvider,
-      user.aiApiKey,
+      provider,
+      apiKey,
       columnsMeta,
       sampleRows
     );
 
+    // Increment free tier counter after successful AI call
+    if (isFreeTier) {
+      const now = new Date();
+      const resetAt = user?.freeAnalysesResetAt ?? null;
+      const needsReset = !resetAt || now > resetAt;
+      const currentUsed = needsReset ? 0 : (user?.freeAnalysesUsed ?? 0);
+      const nextResetAt = new Date(now);
+      nextResetAt.setMonth(nextResetAt.getMonth() + 1);
+
+      try {
+        await db
+          .update(users)
+          .set({
+            freeAnalysesUsed: currentUsed + 1,
+            freeAnalysesResetAt: needsReset ? nextResetAt : resetAt!,
+          })
+          .where(eq(users.id, Number(validated.user.id)));
+      } catch {
+        // DB update failure should not block the response
+      }
+    }
+
     if (suggestions.length === 0) {
-      const fallbackConfigs = buildChartConfigs(columnsMeta, sampleRows);
-      return Response.json({
-        suggestions: fallbackConfigs.map(configToSuggestion),
-        fallback: true,
-        fallbackReason: "A IA não retornou sugestões para esta planilha.",
-      });
+      return Response.json(
+        { error: "A IA não retornou sugestões para esta planilha." },
+        { status: 422 }
+      );
     }
 
     return Response.json({
@@ -108,11 +159,9 @@ export async function POST(req: Request): Promise<Response> {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
-    const fallbackConfigs = buildChartConfigs(columnsMeta, sampleRows);
-    return Response.json({
-      suggestions: fallbackConfigs.map(configToSuggestion),
-      fallback: true,
-      fallbackReason: message,
-    });
+    return Response.json(
+      { error: `Erro na geração de gráficos: ${message}` },
+      { status: 500 }
+    );
   }
 }

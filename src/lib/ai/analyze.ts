@@ -3,7 +3,6 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
-import { decryptApiKey } from "@/lib/crypto/apiKey";
 import type { ColumnMeta, ChartConfig } from "@/types/spreadsheet";
 
 const AI_SAMPLE_ROWS = Number(process.env.AI_SAMPLE_ROWS ?? 50);
@@ -137,20 +136,18 @@ function createModel(provider: string, apiKey: string, modelName: string) {
 }
 
 /**
- * Analyzes spreadsheet data using the user's own AI provider API key.
+ * Analyzes spreadsheet data using a plaintext AI provider API key.
+ * Caller is responsible for decrypting stored keys before passing them here.
  * Tries the default model first, then falls back to alternatives on failure.
- * NEVER log the API key or return it in any response.
+ * NEVER log the apiKey or return it in any response.
  */
 export async function analyzeWithAI(
   provider: string,
-  encryptedKey: string,
+  apiKey: string,
   columnsMeta: ColumnMeta[],
   sampleRows: Record<string, unknown>[],
   chartsConfig: ChartConfig[] = []
 ): Promise<string> {
-  // Decrypt key — used in memory only, never logged
-  const apiKey = decryptApiKey(encryptedKey);
-
   const defaultModel = DEFAULT_MODELS[provider];
   if (!defaultModel) {
     throw new Error(`Provider não suportado: ${provider}`);

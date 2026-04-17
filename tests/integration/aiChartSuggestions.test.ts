@@ -92,7 +92,7 @@ describe("POST /api/ai-chart-suggestions", () => {
     expect(data.error).toBeTruthy();
   });
 
-  it("T-R03: retorna 400 quando usuário não tem chave de API configurada", async () => {
+  it("T-R03: usuário sem chave recebe fallback determinístico (sem chamar IA)", async () => {
     await createUserWithoutApiKey(`r03-${Date.now()}@test.com`);
 
     const { suggestChartsWithAI } = await import("@/lib/ai/suggestCharts");
@@ -100,9 +100,11 @@ describe("POST /api/ai-chart-suggestions", () => {
     const { POST } = await import("@/app/api/ai-chart-suggestions/route");
     const res = await POST(makeRequest(validBody));
 
-    expect(res.status).toBe(400);
+    // No key and no server key in test env → silent deterministic fallback (200)
+    expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.error).toContain("Chave de API");
+    expect(data.fallback).toBe(true);
+    expect(data.suggestions.length).toBeGreaterThan(0);
     // Must NOT have called the AI function
     expect(vi.mocked(suggestChartsWithAI)).not.toHaveBeenCalled();
   });

@@ -17,6 +17,8 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   aiProvider: varchar("ai_provider", { length: 50 }),
   aiApiKey: text("ai_api_key"),
+  freeAnalysesUsed: int("free_analyses_used").default(0).notNull(),
+  freeAnalysesResetAt: datetime("free_analyses_reset_at"),
   createdAt: datetime("created_at").default(sql`NOW()`),
 });
 

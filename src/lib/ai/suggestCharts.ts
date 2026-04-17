@@ -3,7 +3,6 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
-import { decryptApiKey } from "@/lib/crypto/apiKey";
 import { z } from "zod";
 import type { ColumnMeta, ChartSuggestion, ChartType } from "@/types/spreadsheet";
 
@@ -90,19 +89,17 @@ function buildSuggestionsPrompt(
 }
 
 /**
- * Asks the user's AI provider to suggest contextually relevant charts.
- * NEVER logs the decrypted API key.
+ * Asks the AI provider to suggest contextually relevant charts.
+ * Accepts a plaintext apiKey — caller is responsible for decrypting stored keys.
+ * NEVER logs the apiKey.
  * Returns array of ChartSuggestion (may be empty — caller handles fallback).
  */
 export async function suggestChartsWithAI(
   provider: string,
-  encryptedKey: string,
+  apiKey: string,
   columnsMeta: ColumnMeta[],
   sampleRows: Record<string, unknown>[]
 ): Promise<ChartSuggestion[]> {
-  // Decrypt key — used in memory only, never logged
-  const apiKey = decryptApiKey(encryptedKey);
-
   const defaultModel = DEFAULT_MODELS[provider];
   if (!defaultModel) throw new Error(`Provider não suportado: ${provider}`);
 
